@@ -1,0 +1,95 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+body{
+    background-color: #1e293b;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+canvas{
+    text-align: center;
+    margin: 20px;
+    height: calc(100vh - 175px);
+    width: calc(100vw - 20px);
+}
+
+.usersdiv {
+    position: fixed;
+    bottom: 20px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    overflow: auto;
+}
+
+.userdiv {
+    padding: 10px;
+    height: 100px;
+    background-color: #fff;
+    border: 2px solid #000;
+    text-align: center;
+    font-size: 14px;
+    transition: transform 0.3s ease, background-color 0.3s ease;
+    flex: 1 1 auto;
+    min-width: 100px;
+}
+
+.userdiv.active {
+    font-size: 18px;
+    background-color: #ffd700;
+}
+
+
+/* ダイアログのデザイン */
+dialog {
+    padding: 2rem;
+    background-color: #fff;
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 400px;
+    text-align: left;
+    position: relative;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+dialog p {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+dialog button {
+    background-color: #ffd700;
+    border: none;
+    border-radius: 5px;
+    margin-top: 1rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+dialog button:hover {
+    background-color: #ff8c00;
+}
+
+a{
+    color: #000;
+    text-decoration: none;
+    display: inline-block;
+    padding: 0.8rem 2rem;
+}

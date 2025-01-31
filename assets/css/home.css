@@ -1,0 +1,170 @@
+/* 全体のリセット */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+a{
+    color: #000;
+    text-decoration: none;
+    padding: 0.8rem 2rem;
+}
+
+/* 背景とフォント設定 */
+body {
+    background-color: #1e293b;
+    color: #fff;
+    font-family: 'Arial', sans-serif;
+    text-align: center;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+/* タイトルのデザイン */
+h1 {
+    font-size: 3rem;
+    color: #ffd700;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    margin-bottom: 2rem;
+}
+
+/* ボタンのデザイン */
+.buttonui {
+    margin: 1rem 1rem;
+    position: relative;
+    display: inline-block;
+}
+
+.buttonui button {
+    font-size: 1.2rem;
+    padding: 0.8rem 2rem;
+    border: none;
+    background: linear-gradient(45deg, #ffd700, #ff8c00);
+    color: #000;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.buttonui .a{
+    padding: 0.8rem 0;
+}
+
+.buttonui button:hover {
+    background: linear-gradient(45deg, #ff8c00, #ffd700);
+    transform: scale(1.05);
+}
+
+/* 矢印のデザイン */
+.buttonui .arrow {
+    font-size: 1.5rem;
+    position: absolute;
+    right: -3rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ffd700;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.buttonui:hover .arrow {
+    opacity: 1;
+    right: -2rem;
+}
+
+/* ダイアログのデザイン */
+dialog {
+    padding: 2rem;
+    background-color: #fff;
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 400px;
+    text-align: left;
+    position: relative;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+dialog p {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    font-weight: bold;
+}
+
+/* フォームの要素 */
+dialog form {
+    display: flex;
+    flex-direction: column;
+}
+
+dialog form p{
+    font-weight: normal;
+    font-size: 1rem;
+}
+
+dialog datalist, input{
+    padding: 0.5rem;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* ダイアログのボタン */
+dialog .submit {
+    background-color: #ffd700;
+    border: none;
+    border-radius: 5px;
+    margin-top: 1rem;
+    padding: 0.5rem 3rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+dialog .submit:hover {
+    background-color: #ff8c00;
+}
+
+/* 閉じるボタン */
+dialog .closebutton {
+    position: absolute;
+    top: 0.1rem;
+    right: 0.8rem;
+    background: none;
+    border: none;
+    font-size: 3rem;
+    cursor: pointer;
+    color: #888;
+    transition: color 0.3s;
+}
+
+dialog .closebutton:hover {
+    color: #ff0000;
+}
+
+img{
+    height: 15rem;
+    width: 15rem;
+}
+
+@media screen and (max-width: 480px) {
+	h1{
+        font-size: 30px;
+    }
+    p{
+        font-size: 15px;
+    }
+}

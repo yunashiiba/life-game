@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<title>人生ゲーム</title>
+	
+    <link rel="stylesheet" href="/assets/css/main.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <link rel="stylesheet" href="/css/wait.css">
+</head>
+
+    <body>
+        <script src="/socket.io/socket.io.js"></script>
+        <script>
+          const socket = io();
+        
+          function startGame() {
+            socket.emit('game_start', { message: "ゲームがスタートしました！" });
+          }
+          
+          socket.on('game_in', (data) => {
+            const { game, message } = data;
+            if(game == <%- mapid %>){
+              alert(message);
+              location.reload();
+            }
+          });
+        </script>
+        
+        <h1>待機画面</h1>
+        <p>ゲームID：<%= mapid %></p>
+        
+        <div class="side">
+          <div class="div" id="qrcode"></div>
+          
+          <div class="div">
+            <p>プレイヤー一覧</p>
+            <ul>
+              <% if (users && users.length > 0) { %>
+                <% users.forEach(user => { %>
+                  <li><%= user %></li>
+                <% }); %>
+              <% } else { %>
+                <li>プレイヤーがいません。</li>
+              <% } %>
+            </ul>
+          </div>
+        </div>
+        
+        <script type="text/javascript">
+          let currentUrl = location.href;
+          let baseUrl = currentUrl.split("/game/")[0] + "/game";
+          new QRCode(document.getElementById("qrcode"), {
+            text: baseUrl,
+            width: 200,
+            height: 200,
+          }); 
+        </script>
+        
+        <% if (users && users.length > 0) { %>
+          <form action="/game/starting/<%= mapid %>" method="POST" onsubmit="startGame()">
+            <input type="submit" value="ゲームスタート">
+          </form>
+        <% } %>
+    </body>
+</html>

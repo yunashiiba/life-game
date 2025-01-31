@@ -1,0 +1,96 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+body{
+    background-color: #1e293b;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+h1{
+    color: #ffd700;
+    margin: 20px;
+    margin-top: 10vh;
+}
+
+p{
+    color: #fff;
+    margin: 5px
+}
+
+/* ダイアログのデザイン */
+dialog {
+    padding: 1rem;
+    background-color: #fff;
+    color: #000;
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 400px;
+    text-align: center;
+    position: relative;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.6);
+}
+
+dialog p {
+    color: #000;
+    font-size: 1rem;
+    margin-bottom: 1rem;
+}
+
+button {
+    background-color: #ffd700;
+    border: none;
+    border-radius: 5px;
+    padding: 0.8rem 2rem;
+    font-size: 1rem;
+    cursor: pointer;
+    margin: 1rem auto;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #ff8c00;
+}
+
+a{
+    color: #000;
+    text-decoration: none;
+    display: inline-block;
+    padding: 0.8rem 2rem;
+}
+
+.submit {
+    background-color: #ffd700;
+    border: none;
+    border-radius: 5px;
+    margin-top: 1rem;
+    padding: 0.5rem 3rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.submit:hover {
+    background-color: #ff8c00;
+}
+
+@media screen and (max-width: 480px) {
+	h1{
+        font-size: 30px;
+    }
+    p{
+        font-size: 15px;
+    }
+}

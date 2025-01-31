@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<title>人生ゲーム</title>
+    <link rel="stylesheet" href="/css/user.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+</head>
+
+<body>
+    <script src="/socket.io/socket.io.js"></script>
+
+    <h1><%= user.name %>の操作画面</h1>
+    <% if(game.condition == 0){ %>
+        <p>ゲームスタートを待っているよ</p>
+        <form action="/game/user_cancel/<%= user.id %>" method="POST">
+            <input class="submit" type="submit" value="やめる">
+        </form>
+    <% }else if (game.condition == 1){ %>
+    
+    
+        <p>自分の順番：<%= user.turn %>番目</p>
+        <p>所持金：<%= user.money %>円</p>
+        <% if(user.location == -1){ %>
+            <p>現在地：ゴール</p>
+        <% }else{ %>
+            <p>現在地：<%= user.location %>マス目</p>
+        <% } %>
+        <p>家族：<%= user.family %>人</p>
+        <% if (user.location > 1){ %>
+            <% let jobs = ["サラリーマン", "教師", "消防士", "警察官", "医師", "社長"]; %>
+            <% if (user.work >= 0 && user.work < jobs.length) { %>
+                <p>仕事：<%= jobs[user.work] %></p>
+            <% } %>
+        <% } %>
+        <p>１マス進むごとに<%= (user.work + 5)*100 %>円</p>
+        
+        <dialog id="rollDialog">
+            <button id="rollButton">サイコロを回す</button>
+            <p id="diceResult" style="display:none;"></p>
+            <button id="goButton" style="display:none;">進む</button>
+        </dialog>
+        
+        <dialog id="moveDialog">
+            <p id="content"></p>
+            <button id="actionButton">OK</button>
+        </dialog>
+        
+        <dialog id="moveDialog-1">
+            <p>サイコロの出た目に就職する</p>
+            <button id="rollButton-1">まわす</button>
+            <p id="diceResult-1" style="display:none;"></p>
+            <button id="actionButton-1" style="display:none;">OK</button>
+        </dialog>
+        
+        <dialog id="moveDialog-2">
+            <p>サイコロの出た目みんなからお祝儀をもらう</p>
+            <button id="rollButton-2">まわす</button>
+            <p id="diceResult-2" style="display:none;"></p>
+            <button id="actionButton-2" style="display:none;">OK</button>
+        </dialog>
+        
+        <dialog id="goalDialog">
+            <p>ゴール！</p>
+            <button id="goalButton">OK</button>
+        </dialog>
+        
+        
+    <% }else{ %>
+        <p>ゲーム終了しました</p>
+        <button><a href="/game">戻る</a></button>
+    <% } %>
+    
+    
+    <script>
+        const socket = io();
+        let nowtile;
+        let jobs = ["サラリーマン","教師","消防士","警察官","医師","社長"];
+
+        // サーバーから「game_start」イベントを受信
+        socket.on('game_start', (data) => {
+            const { game, users } = data;
+            if(game == <%- game.id %>){
+                location.reload();
+            }
+        });
+        socket.on('game_goal', (data) => {
+            const { game, user } = data;
+            if(game == <%- game.id %>){
+                if(user == <%- user.id %>){
+                    const dialog = document.getElementById('goalDialog');
+                    dialog.showModal();
+                }else{
+                    location.reload();
+                }
+            }
+        });
+        socket.on('game_move', (data) => {
+            const { game, tile, user } = data;
+            if(game == <%- game.id %>){
+                if(user == <%- user.id %>){
+                    if( tile.option != -2 && tile.option != -1){
+                        const dialog = document.getElementById('moveDialog');
+                        const contet = document.getElementById('content');
+                        content.textContent = tile.content;
+                        nowtile = tile;
+                        dialog.showModal();
+                    }else if(tile.option == -2){
+                        const dialog = document.getElementById('moveDialog-2');
+                        const contet = document.getElementById('content-2');
+                        content.textContent = tile.content;
+                        dialog.showModal();
+                    }else{
+                        const dialog = document.getElementById('moveDialog-1');
+                        const contet = document.getElementById('content-1');
+                        content.textContent = tile.content;
+                        dialog.showModal();
+                    }
+                }
+            }
+        });
+        socket.on('game_actioned', (data) => {
+            const { game } = data;
+            if(game == <%- game.id %>){
+                location.reload();
+            }
+        });
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            const gameTurn = <%- game.turn %>;
+            const userTurn = <%- user.turn %>;
+            const userPosition = <%- user.location %>;
+            let diceNumber = 1;
+    
+            if (gameTurn === userTurn) {
+                const dialog = document.getElementById('rollDialog');
+                dialog.showModal();
+            }
+            
+            function roll() {
+                diceNumber = Math.floor(Math.random() * 6) + 1;
+                const resultText = document.getElementById('diceResult');
+                const goButton = document.getElementById('goButton');
+                const rollButton = document.getElementById('rollButton');
+                
+                resultText.textContent = '出た目: ' + diceNumber;
+                resultText.style.display = 'block';
+                goButton.style.display = 'block';
+                rollButton.style.display = 'none';
+            }
+            
+            async function go(){
+              const dialog = document.getElementById('rollDialog');
+              const data = { game: <%- game.id %>,  userId: <%- user.id %>, location: userPosition, roll: diceNumber, work: <%- user.work %>};
+              try {
+                const response = await fetch('/game/user-location', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(data),
+                });
+                if (!response.ok) {
+                  throw new Error('サーバーとの通信に失敗しました。');
+                }
+                dialog.close();
+              } catch (error) {
+                console.error('エラー:', error);
+              }
+            }
+            
+            async function action(){
+              const dialog = document.getElementById('moveDialog');
+              const data = { game: <%- game.id %>, user: {id: <%- user.id %>, game: <%- user.game %> }, tile: nowtile};
+              try {
+                const response = await fetch('/game/user-action', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(data),
+                });
+                window.location.reload();
+                dialog.close();
+              } catch (error) {
+                console.error('エラー:', error);
+              }
+            }
+            
+            function job(){
+                diceNumber = Math.floor(Math.random() * 6);
+                const resultText = document.getElementById('diceResult-1');
+                const actionButton = document.getElementById('actionButton-1');
+                const rollButton = document.getElementById('rollButton-1');
+                
+                resultText.textContent = '出た目: ' + jobs[diceNumber];
+                resultText.style.display = 'block';
+                actionButton.style.display = 'block';
+                rollButton.style.display = 'none';
+            }
+            
+            async function action1(){
+              const dialog = document.getElementById('moveDialog-1');
+              const data = {game: <%- game.id %>, user: {id: <%- user.id %>, game: <%- user.game %> }, job: diceNumber};
+              try {
+                const response = await fetch('/game/user-action1', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(data),
+                });
+                window.location.reload();
+                dialog.close();
+              } catch (error) {
+                console.error('エラー:', error);
+              }
+            }
+            
+            function marriage(){
+                diceNumber = Math.floor(Math.random() * 6) + 1;
+                const resultText = document.getElementById('diceResult-2');
+                const actionButton = document.getElementById('actionButton-2');
+                const rollButton = document.getElementById('rollButton-2');
+                
+                resultText.textContent = '出た目: ' + String(diceNumber) + "×500円";
+                resultText.style.display = 'block';
+                actionButton.style.display = 'block';
+                rollButton.style.display = 'none';
+            }
+            
+            async function action2(){
+              const dialog = document.getElementById('moveDialog-2');
+              const data = {game: <%- game.id %>,  user: {id: <%- user.id %>, game: <%- user.game %> }, money: diceNumber*500};
+              try {
+                const response = await fetch('/game/user-action2', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(data),
+                });
+                window.location.reload();
+                dialog.close();
+              } catch (error) {
+                console.error('エラー:', error);
+              }
+            }
+            
+            function goal(){
+                const dialog = document.getElementById('goalDialog');
+                dialog.close();
+                window.location.reload();
+            }
+            
+            document.getElementById('rollButton').addEventListener('click', roll);
+            document.getElementById('goButton').addEventListener('click', go);
+            document.getElementById('actionButton').addEventListener('click', action);
+            document.getElementById('goalButton').addEventListener('click', goal);
+            document.getElementById('rollButton-1').addEventListener('click', job);
+            document.getElementById('actionButton-1').addEventListener('click', action1);
+            document.getElementById('rollButton-2').addEventListener('click', marriage);
+            document.getElementById('actionButton-2').addEventListener('click', action2);
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>遊び</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
+  <link rel="stylesheet" href="/css/create.css">
+</head>
+<body>
+  <a href="/create">back</a><br>
+  <h1><%= map.name %> マップ編集</h1>
+  
+  <dialog id="dialog">
+    <p id="dialog-title">表示名:</p>
+    <p id="dialog-content">中身:</p>
+    <button onclick="deleteDialog()">削除</button><br><br>
+    
+    <p class="bold">前にマスを追加</p>
+    <select id="tile-option">
+     <option value=0>ノーマル</option>
+     <option value=1>お金が動く</option>
+     <option value=2>右隣の人とお金をやり取り</option>
+     <option value=5>子供がいたらお金が動く</option>
+     <option value=3>お宝発見</option>
+    </select><br>
+    <input type="text" id="tile-name" placeholder="表示名(五文字以内)"><br>
+    <input type="text" id="tile-content" placeholder="中身(説明を書く)"><br>
+    <select id="tile-money" style="display: none;">
+     <% money = [-30000,-10000,-5000,-3000,-1000,1000,3000,5000,10000,30000] 
+     for(i=0; i<money.length; i++){%>
+     <option value=<%= money[i] %>><%= money[i] %>円</option>
+     <% } %>
+    </select>
+    <select id="tile-treasure" style="display: none;">
+     <option value=1>別荘</option>
+     <option value=2>家</option>
+     <option value=3>ロケット</option>
+    </select>
+    <p id="tile-content-1" style="display: none;"></p>
+    <button onclick="createTile()">作成</button><br><br>
+    <button class="closebutton" onclick="closeDialog()">×</button>
+  </dialog>
+
+  <script>
+    const config = {
+      type: Phaser.AUTO,
+      width: Math.floor(window.innerWidth - 10),
+      height: Math.floor(window.innerHeight - 200),
+      backgroundColor: '#1e293b',
+      scene: {
+        preload: preload,
+        create: create
+      }
+    };
+
+    const game = new Phaser.Game(config);
+    let newPosition = 0;
+    let nowPosition = 0;
+    let datas = <%- JSON.stringify(datas) %>
+
+    function preload() {
+      
+    }
+    
+    window.addEventListener('resize', () => {
+      game.scale.resize(Math.floor(window.innerWidth - 10), Math.floor(window.innerHeight - 200));
+    });
+    
+    function create() {
+      const tileSize = Math.min(Math.floor(config.width / 15), Math.floor(config.height / 7));
+      const maxWidth = 15;
+      const maxHeight = 7; 
+      let tiles = [{ id: -1, title: "Start",content: "",option: 0, position:0 }, { id: -2, title: "Goal",content: "",option: 0, position: 10 }];
+      tiles.splice(1, 0, ...datas);
+      
+      let direction = 'right'; // 初期方向
+      let x = 0; // 初期x座標
+      let y = 0; // 初期y座標
+    
+      // 外周の描画範囲
+      let minX = 0;
+      let minY = 0;
+      let maxX = maxWidth - 1;
+      let maxY = maxHeight - 1;
+      
+      const positions = [];
+    
+      // タイルを描画
+      for (let i = 0; i < tiles.length; i++) {
+        const screenX = x * tileSize + tileSize / 2;
+        const screenY = y * tileSize + tileSize / 2;
+    
+        // 色の設定 (開始と終了は特別な色)
+        const color = i === 0 ? 0x00ff00 : i === tiles.length - 1 ? 0xff0000 : 0xffffff;
+    
+        // タイルの描画
+        const tile = this.add.rectangle(screenX, screenY, tileSize - 10, tileSize - 10, color);
+        //tile.setStrokeStyle(2, 0x000000);
+        tile.setInteractive(); // インタラクションを有効化
+    
+        if (i !== 0) {
+          tile.on('pointerdown', () => {
+            newPosition = (tiles[i].position + tiles[i - 1].position) / 2;
+            nowPosition = tiles[i].position;
+            showDialog(tiles[i].title,tiles[i].content,tiles[i].option); // ダイアログを表示
+          });
+        }
+    
+        const maxChars = 5;  // 1マスに入る最大文字数（全角5文字）
+        const fontSize = Math.floor(tileSize / maxChars);
+    
+        // テキストの描画
+        this.add.text(screenX, screenY, tiles[i].title, {
+          fontSize: `${fontSize}px`,
+          color: '#000'
+        }).setOrigin(0.5);
+    
+        // 次のマスの方向を決定
+        let newDirection = direction; // 現在の方向を保持
+        if (direction === 'right' && x >= maxX) {
+          newDirection = 'down';
+          minY++; // 内側に進める
+        } else if (direction === 'down' && y >= maxY) {
+          newDirection = 'left';
+          maxX--; // 内側に進める
+        } else if (direction === 'left' && x <= minX) {
+          newDirection = 'up';
+          maxY--; // 内側に進める
+        } else if (direction === 'up' && y <= minY) {
+          newDirection = 'right';
+          minX++; // 内側に進める
+        }
+        
+        direction = newDirection; // 新しい方向をセット
+        
+        positions.push({ x, y });
+    
+        // 座標の更新
+        if (direction === 'right') {
+          x++;
+        } else if (direction === 'down') {
+          y++;
+        } else if (direction === 'left') {
+          x--;
+        } else if (direction === 'up') {
+          y--;
+        }
+      }
+    
+      // 各タイルの枠を描画
+      positions.forEach((pos, index) => {
+        const { x, y } = pos;
+        const screenX = x * tileSize + tileSize / 2;
+        const screenY = y * tileSize + tileSize / 2;
+        
+        let isTop = false, isBottom = false, isLeft = false, isRight = false;
+        let layer = 0;
+        
+        while(true){
+          const perimeter = (maxWidth + maxHeight) * 2 - 4; // 1層あたりの周囲の数
+          const layerOffset = layer * 8; // 各層で減少するタイル数
+          const layerEndIndex = (perimeter * (layer + 1)) - layerOffset - 1;
+          
+          if (index === layerEndIndex) {
+            isTop = true;
+            isLeft = true;
+            break;
+          }
+          if (index < layerEndIndex) {
+            let cumulativeIndex = 0;
+            for (let l = 0; l < layer; l++) {
+              cumulativeIndex += ((maxWidth + maxHeight) * 2 - 4) * (l + 1) - l * 8;
+            }
+            
+            for (let edge = 0; edge < 4; edge++) {
+              if (edge === 0 || edge === 2) {
+                cumulativeIndex += maxWidth - 1 - layer * 2;
+              } else {
+                cumulativeIndex += maxHeight - 1 - layer * 2;
+              }
+              if (index === cumulativeIndex) {
+                switch (edge) {
+                  case 0: isTop = isRight = true; break;  // 右上隅
+                  case 1: isBottom = isRight = true; break; // 右下隅
+                  case 2: isBottom = isLeft = true; break;  // 左下隅
+                }
+                break;
+              }
+              if (index < cumulativeIndex) {
+                if (edge === 0 || edge === 2) {
+                  isTop = isBottom = true; // 上または下の辺
+                } else {
+                  isLeft = isRight = true; // 左または右の辺
+                }
+                break;
+              }
+            }
+            break;
+          }
+          layer++;
+        }
+        
+        if (isTop) {
+          this.add.line(screenX, screenY - tileSize / 2, 0, 0, tileSize, 0, 0x000000).setLineWidth(2);
+        }
+        if (isBottom) {
+          this.add.line(screenX, screenY + tileSize / 2, 0, 0, tileSize, 0, 0x000000).setLineWidth(2);
+        }
+        if (isLeft) {
+          this.add.line(screenX - tileSize / 2, screenY, 0, 0, 0, tileSize, 0x000000).setLineWidth(2);
+        }
+        if (isRight) {
+          this.add.line(screenX + tileSize / 2, screenY, 0, 0, 0, tileSize, 0x000000).setLineWidth(2);
+        }
+      });
+    }
+
+    function updateMap(updatedTiles) {
+      datas = updatedTiles; // 更新されたタイルデータで tiles を上書き
+      const scene = game.scene.scenes[0]; // 現在のシーンを取得
+      scene.scene.restart(); // シーンを再起動し、再描画
+    }
+
+    function showDialog(title,content,option) {
+      const dialog = document.getElementById('dialog');
+      const titleElement = document.getElementById('dialog-title');
+      const contentElement = document.getElementById('dialog-content');
+      
+      titleElement.textContent = `表示名: ${title}`;
+      contentElement.textContent = `中身: ${content}`;
+      dialog.showModal();
+    }
+    
+    document.getElementById('tile-option').addEventListener('change', function () {
+      const tileOption = this.value;
+      const tileMoney = document.getElementById('tile-money');
+      const tileTreasure = document.getElementById('tile-treasure');
+      const tileContent1 = document.getElementById('tile-content-1');
+      const optionMoney = {
+        "-5": "円子供がいたら失う",
+        "-2": "円右隣の人にあげる",
+        "-1": "円失う",
+        "1": "円貰う",
+        "2": "円右隣の人から貰う",
+        "5": "円子供がいたら貰う"
+      };
+      const optionTreasure = {
+        "1": "お宝「別荘」をもらう",
+        "2": "お宝「家」をもらう",
+        "3": "お宝「ロケット」をもらう"
+      };
+      
+      tileMoney.style.display = 'none';
+      tileTreasure.style.display = 'none';
+      tileContent1.style.display = 'none';
+      
+      if (tileOption == 1 || tileOption == 2 || tileOption == 5) {
+        tileMoney.style.display = 'block';
+        let description = "";
+        let selectedMoney = tileMoney.value;
+        if(selectedMoney<0){
+          description = String(-selectedMoney) + optionMoney[-tileOption]
+        }else{
+          description = String(selectedMoney) + optionMoney[tileOption]
+        }
+        tileContent1.textContent = description;
+        tileContent1.style.display = 'block';
+        
+        tileMoney.addEventListener('change', function () {
+          const selectedMoney = this.value;
+          if(selectedMoney<0){
+            description = String(-selectedMoney) + optionMoney[-tileOption]
+          }else{
+            description = String(selectedMoney) + optionMoney[tileOption]
+          }
+          tileContent1.textContent = description;
+        });
+      } else if (tileOption == 3) {
+        tileTreasure.style.display = 'block';
+        tileContent1.style.display = 'block';
+        tileContent1.textContent = optionTreasure[tileTreasure.value];
+        tileTreasure.addEventListener('change', function () {
+          const selectedTreasure = this.value;
+          tileContent1.textContent = optionTreasure[selectedTreasure];
+        });
+      }
+    });
+    
+    async function deleteDialog(){
+      const deleteTile = { mapId: <%- map.id %>, position: nowPosition};
+      try {
+        const response = await fetch('/create/update-map-delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(deleteTile),
+        });
+        if (!response.ok) {
+          throw new Error('サーバーとの通信に失敗しました。');
+        }
+        const updatedMap = await response.json();
+        updateMap(updatedMap.datas);
+        closeDialog();
+      } catch (error) {
+        console.error('エラー:', error);
+      }
+    }
+
+    // ダイアログを閉じる関数
+    function closeDialog() {
+      const dialog = document.getElementById('dialog');
+      dialog.close();
+    }
+
+    async function createTile() {
+      const tileNameInput = document.getElementById('tile-name');
+      const tileName = tileNameInput.value.trim();
+      const tileContentInput = document.getElementById('tile-content');
+      let tileContent = tileContentInput.value.trim();
+      const tileOptionInput = document.getElementById('tile-option');
+      const tileMoney = document.getElementById('tile-money');
+      const tileTreasure = document.getElementById('tile-treasure');
+      const tileOption = tileOptionInput.value;
+      let titleOption1 = 0;
+      
+      const optionMoney = {
+        "-5": "円子供がいたら失う",
+        "-2": "円右隣の人にあげる",
+        "-1": "円失う",
+        "1": "円貰う",
+        "2": "円右隣の人から貰う",
+        "5": "円子供がいたら貰う"
+      };
+      const optionTreasure = {
+        "1": "お宝「別荘」をもらう",
+        "2": "お宝「家」をもらう",
+        "3": "お宝「ロケット」をもらう"
+      };
+      
+      if (tileOption == 1 || tileOption == 2 || tileOption == 5) {
+        let description = "";
+        let selectedMoney = tileMoney.value;
+        if(selectedMoney<0){
+          description = String(-selectedMoney) + optionMoney[-tileOption];
+        }else{
+          description = String(selectedMoney) + optionMoney[tileOption];
+        }
+        tileContent = tileContent + "　" + description;
+        titleOption1 = selectedMoney;
+      }else if (tileOption == 3) {
+        tileContent = tileContent + "　" + optionTreasure[tileTreasure.value];
+        titleOption1 = tileTreasure.value;
+      }
+
+      if (!tileName) {
+        alert('タイル名を入力してください。');
+        return;
+      }
+      
+      if (datas.length >= 100) {
+        alert('1マップにつき最大100件のタイルが作成できます。');
+        return;
+      }
+
+      const newTile = { mapId: <%- map.id %>, newPosition: newPosition, title: tileName, content: tileContent ,option: tileOption, option1: titleOption1 };
+      try {
+        const response = await fetch('/create/update-map', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(newTile),
+        });
+        if (!response.ok) {
+          throw new Error('サーバーとの通信に失敗しました。');
+        }
+        const updatedMap = await response.json();
+        updateMap(updatedMap.datas); // 更新されたタイルでシーンを再起動
+        closeDialog();
+        tileNameInput.value = '';
+        tileContentInput.value = '';
+      } catch (error) {
+        console.error('エラー:', error);
+      }
+    }
+  </script>
+</body>
+</html>

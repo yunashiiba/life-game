@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>人生ゲーム</title>
+    <link rel="stylesheet" href="/css/home.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+</head>
+
+<body>
+    <h1>ゲームモード</h1>
+    
+    <div class="buttonui">
+        <button class="a"><a href="/">ホームに戻る</a></button>
+        <span class="arrow white">←</span>
+    </div>
+    
+    <div class="buttonui">
+        <button id="open0">ゲームを作成</button>
+        <span class="arrow white">←</span>
+    </div>
+    
+    <div class="buttonui">
+        <button id="open1">ゲームに参加</button>
+        <span class="arrow white">←</span>
+    </div>
+    
+    <dialog class='dialog0'>
+        <p>ゲームを作成</p>
+        <form action="/game/start" method="POST">
+            マップを選択
+            <input list="options" id="putname" name="name">
+            <datalist id="options">
+                <% maps.forEach(map => { %>
+                  <option value="<%= map.name %>"><%= map.name %></option>
+                <% }); %>
+            </datalist>
+            <p id="putid"></p>
+            <input type="hidden" id="puthidden" name="maps">
+            <input class="submit" type="submit" value="作成">
+        </form>
+
+        <button class="closebutton" id="close0">×</button>
+    </dialog>
+    
+    <dialog class='dialog1'>
+        <p>ゲームに参加</p>
+        <form action="/game/in" method="POST">
+            ゲームID<input type="text" name="id">
+            ユーザー名<input type="text" name="name">
+            <input class="submit" type="submit" value="参加">
+        </form>
+        <button class="closebutton" id="close1">×</button>
+    </dialog>
+    
+    <script>
+        let dialog = [];
+        let btn_close = [];
+        let btn_open = [];
+
+        for (let i = 0; i < 2; i++) {
+            dialog[i] = document.querySelector('.dialog' + i); // ダイアログ要素の取得
+            btn_close[i] = document.getElementById('close' + i); // 閉じるボタンの取得
+
+            btn_close[i].addEventListener('click', function() {
+                dialog[i].close();
+            }, false);
+
+            btn_open[i] = document.getElementById('open' + i); // 開くボタンの取得
+            if (btn_open[i] != null) {
+                btn_open[i].addEventListener('click', function() {
+                    dialog[i].showModal();
+                }, false);
+            }
+        }
+        
+        
+        const mapMap = {};
+        <%- JSON.stringify(maps) %>.forEach(map => {
+            mapMap[map.name] = map.id;
+        });
+        
+        document.getElementById('putname').addEventListener('input', function () {
+            const inputName = this.value;
+            const id = mapMap[inputName];
+            const puthidden = document.getElementById('puthidden');
+            
+            if (id) {
+                document.getElementById('putid').textContent = 'OK！';
+                puthidden.value = id;
+            } else {
+                document.getElementById('putid').textContent = 'mapが見つかりません';
+                puthidden.value = 0;
+            }
+        });
+
+
+    </script>
+</body>
+</html>

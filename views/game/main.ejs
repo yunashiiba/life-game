@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<title>人生ゲーム</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.js"></script>
+  <link rel="stylesheet" href="/css/game.css">
+</head>
+
+    <body>
+    <script src="/socket.io/socket.io.js"></script>
+      
+      <dialog id="dialog">
+        <p>止まったマス</p>
+        <p id="dialog-title">題名:</p>
+        <p id="dialog-content">内容:</p>
+      </dialog>
+      
+      <dialog id="dialog1">
+        <p>ゲーム終了！</p>
+        <p id="dialog-content1"></p>
+        <button><a href="/game">戻る</a></button>
+      </dialog>
+      
+      <div class="usersdiv">
+        <% users.forEach((user, index) => { %>
+          <div class="userdiv <%= user.turn==game.turn ? 'active' : '' %>" id="user<%= index %>">
+            <%= user.name %><br><br><%= user.money %>円
+          </div>
+        <% }); %>
+      </div>
+      
+      
+      <script>
+        if (<%- game.condition %> == 2) {
+          const users = <%- JSON.stringify(users) %>;
+          const sortedUsers = [...users].sort((a, b) => b.money - a.money);
+      
+          let rankText = "";
+          sortedUsers.forEach((user, index) => {
+            rankText += `${index + 1}位: ${user.name}　`;
+          });
+      
+          const dialog = document.getElementById('dialog1');
+          const contentElement = document.getElementById('dialog-content1');
+          contentElement.textContent = "順位：" + rankText;
+          dialog.showModal();
+        }
+        
+        const config = {
+          type: Phaser.AUTO,
+          width: Math.floor(window.innerWidth - 20),
+          height: Math.floor(window.innerHeight - 175),
+          backgroundColor: '#1e293b',
+          scene: {
+            preload: preload,
+            create: create
+          }
+        };
+    
+        const game = new Phaser.Game(config);
+        let datas = <%- JSON.stringify(datas) %>
+    
+        function preload() {
+          
+        }
+        
+        window.addEventListener('resize', () => {
+          game.scale.resize(Math.floor(window.innerWidth - 20), Math.floor(window.innerHeight - 175));
+        });
+        
+        function create() {
+          const tileSize = Math.min(Math.floor(config.width / 15), Math.floor(config.height / 7));
+          const maxWidth = 15;
+          const maxHeight = 7; 
+          let tiles = [{ id: -1, title: "Start",content: "",option: 0, position:0 }, { id: -2, title: "Goal",content: "",option: 0, position: 10 }];
+          tiles.splice(1, 0, ...datas);
+          
+          let direction = 'right'; // 初期方向
+          let x = 0; // 初期x座標
+          let y = 0; // 初期y座標
+        
+          // 外周の描画範囲
+          let minX = 0;
+          let minY = 0;
+          let maxX = maxWidth - 1;
+          let maxY = maxHeight - 1;
+          
+          const positions = [];
+        
+          // タイルを描画
+          for (let i = 0; i < tiles.length; i++) {
+            const screenX = x * tileSize + tileSize / 2;
+            const screenY = y * tileSize + tileSize / 2;
+        
+            // 色の設定 (開始と終了は特別な色)
+            const color = i === 0 ? 0x00ff00 : i === tiles.length - 1 ? 0xff0000 : 0xffffff;
+        
+            // タイルの描画
+            const tile = this.add.rectangle(screenX, screenY, tileSize - 10, tileSize - 10, color);
+            //tile.setStrokeStyle(2, 0x000000);
+            
+            const maxChars = 5;  // 1マスに入る最大文字数（全角5文字）
+            const fontSize = Math.floor(tileSize / maxChars);
+        
+            // テキストの描画
+            this.add.text(screenX, screenY, tiles[i].title, {
+              fontSize: `${fontSize}px`,
+              color: '#000'
+            }).setOrigin(0.5);
+        
+            // 次のマスの方向を決定
+            let newDirection = direction; // 現在の方向を保持
+            if (direction === 'right' && x >= maxX) {
+              newDirection = 'down';
+              minY++; // 内側に進める
+            } else if (direction === 'down' && y >= maxY) {
+              newDirection = 'left';
+              maxX--; // 内側に進める
+            } else if (direction === 'left' && x <= minX) {
+              newDirection = 'up';
+              maxY--; // 内側に進める
+            } else if (direction === 'up' && y <= minY) {
+              newDirection = 'right';
+              minX++; // 内側に進める
+            }
+            
+            direction = newDirection; // 新しい方向をセット
+            
+            positions.push({ x, y });
+        
+            // 座標の更新
+            if (direction === 'right') {
+              x++;
+            } else if (direction === 'down') {
+              y++;
+            } else if (direction === 'left') {
+              x--;
+            } else if (direction === 'up') {
+              y--;
+            }
+          }
+        
+          // 各タイルの枠を描画
+          positions.forEach((pos, index) => {
+            const { x, y } = pos;
+            const screenX = x * tileSize + tileSize / 2;
+            const screenY = y * tileSize + tileSize / 2;
+            
+            let isTop = false, isBottom = false, isLeft = false, isRight = false;
+            let layer = 0;
+            
+            while(true){
+              const perimeter = (maxWidth + maxHeight) * 2 - 4; // 1層あたりの周囲の数
+              const layerOffset = layer * 8; // 各層で減少するタイル数
+              const layerEndIndex = (perimeter * (layer + 1)) - layerOffset - 1;
+              
+              if (index === layerEndIndex) {
+                isTop = true;
+                isLeft = true;
+                break;
+              }
+              if (index < layerEndIndex) {
+                let cumulativeIndex = 0;
+                for (let l = 0; l < layer; l++) {
+                  cumulativeIndex += ((maxWidth + maxHeight) * 2 - 4) * (l + 1) - l * 8;
+                }
+                
+                for (let edge = 0; edge < 4; edge++) {
+                  if (edge === 0 || edge === 2) {
+                    cumulativeIndex += maxWidth - 1 - layer * 2;
+                  } else {
+                    cumulativeIndex += maxHeight - 1 - layer * 2;
+                  }
+                  if (index === cumulativeIndex) {
+                    switch (edge) {
+                      case 0: isTop = isRight = true; break;  // 右上隅
+                      case 1: isBottom = isRight = true; break; // 右下隅
+                      case 2: isBottom = isLeft = true; break;  // 左下隅
+                    }
+                    break;
+                  }
+                  if (index < cumulativeIndex) {
+                    if (edge === 0 || edge === 2) {
+                      isTop = isBottom = true; // 上または下の辺
+                    } else {
+                      isLeft = isRight = true; // 左または右の辺
+                    }
+                    break;
+                  }
+                }
+                break;
+              }
+              layer++;
+            }
+            
+            if (isTop) {
+              this.add.line(screenX, screenY - tileSize / 2, 0, 0, tileSize, 0, 0x000000).setLineWidth(2);
+            }
+            if (isBottom) {
+              this.add.line(screenX, screenY + tileSize / 2, 0, 0, tileSize, 0, 0x000000).setLineWidth(2);
+            }
+            if (isLeft) {
+              this.add.line(screenX - tileSize / 2, screenY, 0, 0, 0, tileSize, 0x000000).setLineWidth(2);
+            }
+            if (isRight) {
+              this.add.line(screenX + tileSize / 2, screenY, 0, 0, 0, tileSize, 0x000000).setLineWidth(2);
+            }
+          });
+          
+          const users = <%- JSON.stringify(users) %>
+          users.forEach(user => {
+              let userPosition = user.location; // ユーザーの位置
+              let userTile;
+              if (userPosition === -1) {
+                userTile = tiles[tiles.length - 1];
+                userPosition = tiles.length - 1;
+              } else {
+                userTile = tiles[userPosition];
+              }
+              
+              if (positions[userPosition]) {
+                const userX = positions[userPosition].x * tileSize + tileSize / 2;
+                const userY = positions[userPosition].y * tileSize + tileSize / 2;
+            
+                this.add.circle(userX, userY, tileSize / 4, 0x0000ff);  // ユーザーを青い円で表示
+            
+                this.add.text(userX, userY, user.name, {
+                  fontSize: `${tileSize / 5}px`,
+                  color: '#fff'
+                }).setOrigin(0.5);
+              }
+          });
+        }
+    
+        function showDialog(title,content) {
+          const dialog = document.getElementById('dialog');
+          const titleElement = document.getElementById('dialog-title');
+          const contentElement = document.getElementById('dialog-content');
+          
+          titleElement.textContent = `表示名: ${title}`;
+          contentElement.textContent = `中身: ${content}`;
+          dialog.showModal();
+        }
+        
+        // ダイアログを閉じる関数
+        function closeDialog() {
+          const dialog = document.getElementById('dialog');
+          dialog.close();
+        }
+        
+        const socket = io();
+        // サーバーから「game_start」イベントを受信
+        socket.on('game_roll', async (data) => {
+          const { game, userId, location, roll, work } = data;
+          
+          if(game == <%- game.id %>){
+            const start = location + 1;
+            const end = location + roll;
+            let nowlocation = location + roll;
+            
+            const invalidTiles = [];
+            for (let i = start; i <= end; i++) {
+              if(i == datas.length){
+                nowlocation = 0;
+                break
+              }
+              if (datas[i - 1].option < 0) {
+                nowlocation = i;
+                break
+              }
+            }
+            
+            if(nowlocation == 0){
+              let sentdata = { userId: userId ,game: <%- game.id %>};
+              try {
+                const response = await fetch('/game/user-goal', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(sentdata),
+                });
+                if (!response.ok) {
+                  throw new Error('サーバーとの通信に失敗しました。');
+                }
+                dialog.close();
+              } catch (error) {
+                console.error('エラー:', error);
+              }
+              
+              showDialog("ゴール", "20000円もらう");
+            }else{
+              let moving = nowlocation - start
+              let money = (work + 5) * 100 * moving
+              let sentdata = { userId: userId, location: nowlocation, tile: datas[nowlocation-1].position, game: <%- game.id %>, map: <%- game.map %>, money: money};
+              try {
+                const response = await fetch('/game/user-move', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(sentdata),
+                });
+                if (!response.ok) {
+                  throw new Error('サーバーとの通信に失敗しました。');
+                }
+                dialog.close();
+              } catch (error) {
+                console.error('エラー:', error);
+              }
+              
+              let nowtile = datas[nowlocation - 1];
+              showDialog(nowtile.title, nowtile.content);
+            }
+          }
+        });
+        
+        socket.on('game_actioned', (data) => {
+          const { game } = data;
+          if(game == <%- game.id %>){
+            location.reload();
+          }
+        });
+        
+        socket.on('game_goal', (data) => {
+          const {game: game, user: userId} = data;
+          if(game == <%- game.id %>){
+            location.reload();
+          }
+        });
+      </script>
+    </body>
+</html>
